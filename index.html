@@ -2558,6 +2558,9 @@
                     <button class="game-btn" style="padding: 15px; font-size: 18px; background: linear-gradient(135deg, #ff6b6b, #4ecdc4); color: white; border: none; border-radius: var(--border-radius-md); cursor: pointer; transition: all 0.3s ease;" onclick="selectGameMode('dungeon')">
                         🏆 副本模式
                     </button>
+                    <button class="game-btn" style="padding: 15px; font-size: 18px; background: linear-gradient(135deg, #4361ee, #3a0ca3); color: white; border: none; border-radius: var(--border-radius-md); cursor: pointer; transition: all 0.3s ease;" onclick="selectGameMode('exploration')">
+                        🗺️ 探索模式
+                    </button>
                 </div>
             </div>
             <div class="modal-btn-container">
@@ -2638,10 +2641,61 @@
                 <!-- 副本详情将通过JS动态生成 -->
             </div>
             <div class="modal-btn-container">
-                <button class="modal-btn secondary" onclick="closeDungeonDetailModal()">取消</button>
-                <button class="modal-btn primary" id="enterDungeonBtn" onclick="enterDungeon()">进入副本</button>
+                <button class="modal-btn secondary" onclick="closeDungeonDetailModal()">关闭</button>
             </div>
         </div>
+    </div>
+    
+    <!-- 探索模式模态框 -->
+    <div id="explorationModal" class="modal">
+        <div class="modal-content">
+            <h3 class="modal-title">🗺️ 选择探索区域</h3>
+            <div class="modal-body" style="text-align: left;">
+                <p style="margin-bottom: 20px; color: var(--text-secondary);">
+                    选择你想要探索的区域，每个区域都有不同的怪物、资源和宝藏！
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div style="padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: var(--border-radius-md); cursor: pointer; transition: all 0.3s ease; border-left: 4px solid #4CAF50;" onclick="selectExplorationArea('forest')">
+                        <div style="font-weight: bold; color: #4CAF50;">🌲 神秘森林</div>
+                        <div style="font-size: 14px; opacity: 0.8; margin-top: 5px;">基础探索区域，适合新手</div>
+                        <div style="font-size: 12px; opacity: 0.6; margin-top: 3px;">怪物强度：★☆☆☆☆</div>
+                    </div>
+                    <div style="padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: var(--border-radius-md); cursor: pointer; transition: all 0.3s ease; border-left: 4px solid var(--accent-color);" onclick="selectExplorationArea('mountain')">
+                        <div style="font-weight: bold; color: var(--accent-color);">⛰️ 险峻山脉</div>
+                        <div style="font-size: 14px; opacity: 0.8; margin-top: 5px;">中级探索区域，有更多资源</div>
+                        <div style="font-size: 12px; opacity: 0.6; margin-top: 3px;">怪物强度：★★★☆☆</div>
+                    </div>
+                    <div style="padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: var(--border-radius-md); cursor: pointer; transition: all 0.3s ease; border-left: 4px solid #ff9800;" onclick="selectExplorationArea('desert')">
+                        <div style="font-weight: bold; color: #ff9800;">🏜️ 灼热沙漠</div>
+                        <div style="font-size: 14px; opacity: 0.8; margin-top: 5px;">高级探索区域，资源丰富</div>
+                        <div style="font-size: 12px; opacity: 0.6; margin-top: 3px;">怪物强度：★★★★☆</div>
+                    </div>
+                    <div style="padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: var(--border-radius-md); cursor: pointer; transition: all 0.3s ease; border-left: 4px solid #f44336;" onclick="selectExplorationArea('dungeon')">
+                        <div style="font-weight: bold; color: #f44336;">🏰 古老地牢</div>
+                        <div style="font-size: 14px; opacity: 0.8; margin-top: 5px;">顶级探索区域，稀有宝藏</div>
+                        <div style="font-size: 12px; opacity: 0.6; margin-top: 3px;">怪物强度：★★★★★</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-btn-container">
+                <button class="modal-btn secondary" onclick="closeExplorationModal()">取消</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 探索结果模态框 -->
+    <div id="explorationResultModal" class="modal">
+        <div class="modal-content">
+            <h3 class="modal-title">🎉 探索结果</h3>
+            <div class="modal-body" id="explorationResultModalBody">
+                <!-- 探索结果将通过JS动态生成 -->
+            </div>
+            <div class="modal-btn-container">
+                <button class="modal-btn primary" onclick="continueExploration()">继续探索</button>
+                <button class="modal-btn secondary" onclick="closeExplorationResultModal()">返回城镇</button>
+            </div>
+        </div>
+    </div>
     </div>
     <!-- 养成与装备管理模态框 -->
     <div id="equipmentModal" class="modal">
@@ -3184,6 +3238,20 @@
             window.isBattleActive = isBattleActive;
             // 战斗状态锁，防止重复点击攻击按钮
             let isAttackInProgress = false;
+            
+            // 探索模式相关变量
+            let currentExplorationArea = 'forest';
+            let explorationParams = {
+                enemyLevel: 1,
+                treasureRate: 0.3,
+                resourceRate: 0.4
+            };
+            let explorationStats = {
+                encounters: 0,
+                treasuresFound: 0,
+                resourcesGathered: 0,
+                totalSteps: 0
+            };
             // 定义职业专属技能
             const CLASS_SKILLS = {
                 战士: [
@@ -3228,7 +3296,8 @@
                 破甲: 6,
                 减伤: 7,
                 格挡: 8,
-                闪避: 9
+                闪避: 9,
+                速度: 10
             };
 
             // 属性类型到升级键名的映射表
@@ -3242,14 +3311,17 @@
                 [AttrType.破甲]: 'armorPenetration',
                 [AttrType.减伤]: 'damageReduction',
                 [AttrType.格挡]: 'block',
-                [AttrType.闪避]: 'dodge'
+                [AttrType.闪避]: 'dodge',
+                [AttrType.速度]: 'speed'
             };
 
             const Part = {
                 武器: 0,
-                防具: 1,
-                饰品: 2,
-                护符: 3
+                头盔: 1,
+                胸甲: 2,
+                护腕: 3,
+                鞋子: 4,
+                饰品: 5
             };
 
             const Rarity = {
@@ -3265,12 +3337,13 @@
             // 属性上限常量管理
             const ATTR_CAPS = {
                 [AttrType.暴击率]: 0.5,    // 暴击率上限50%
-                [AttrType.暴击伤害]: 1.5,  // 暴击伤害上限150%
-                [AttrType.吸血]: 0.3,      // 吸血上限30%
+                [AttrType.暴击伤害]: 2.0,  // 暴击伤害上限200%
+                [AttrType.吸血]: 0.35,     // 吸血上限35%
                 [AttrType.破甲]: 0.7,      // 破甲上限70%
-                [AttrType.减伤]: 0.6,      // 减伤上限60%
-                [AttrType.格挡]: 0.4,      // 格挡上限40%
-                [AttrType.闪避]: 0.4       // 闪避上限40%
+                [AttrType.减伤]: 0.7,      // 减伤上限70%
+                [AttrType.格挡]: 0.5,      // 格挡上限50%
+                [AttrType.闪避]: 0.5       // 闪避上限50%
+                // 速度属性无上限
             };
             
             // 装备系统常量管理
@@ -3278,9 +3351,11 @@
                 // 装备类型
                 PARTS: {
                     武器: 0,
-                    防具: 1,
-                    饰品: 2,
-                    护符: 3
+                    头盔: 1,
+                    胸甲: 2,
+                    护腕: 3,
+                    鞋子: 4,
+                    饰品: 5
                 },
                 
                 // 装备稀有度
@@ -3316,8 +3391,49 @@
                     [AttrType.破甲, "破甲+{}%", 1.5, 4.5],
                     [AttrType.减伤, "伤害减免+{}%", 1.5, 3.5],
                     [AttrType.格挡, "格挡+{}%", 1, 3],
-                    [AttrType.闪避, "闪避+{}%", 1, 3]
+                    [AttrType.闪避, "闪避+{}%", 1, 3],
+                    [AttrType.速度, "速度+{}", 1.5, 4.5]
                 ],
+                
+                // 类型专属词缀池
+                TYPE_AFFIX_POOLS: {
+                    [Part.武器]: [
+                        [AttrType.攻击, "攻击+{}", 5, 15],      // 提升强度
+                        [AttrType.暴击率, "暴击率+{}%", 2, 5],  // 提升强度
+                        [AttrType.暴击伤害, "暴击伤害+{}%", 10, 20], // 提升强度
+                        [AttrType.破甲, "破甲+{}%", 2, 6]        // 提升强度
+                    ],
+                    [Part.头盔]: [
+                        [AttrType.生命, "生命+{}", 20, 60],     // 提升强度
+                        [AttrType.防御, "防御+{}", 3, 10],      // 提升强度
+                        [AttrType.减伤, "伤害减免+{}%", 2, 5],  // 提升强度
+                        [AttrType.格挡, "格挡+{}%", 1.5, 4]     // 提升强度
+                    ],
+                    [Part.胸甲]: [
+                        [AttrType.防御, "防御+{}", 4, 12],      // 提升强度
+                        [AttrType.生命, "生命+{}", 25, 70],     // 提升强度
+                        [AttrType.减伤, "伤害减免+{}%", 2.5, 6], // 提升强度
+                        [AttrType.格挡, "格挡+{}%", 2, 5]       // 提升强度
+                    ],
+                    [Part.护腕]: [
+                        [AttrType.攻击, "攻击+{}", 4, 12],      // 提升强度
+                        [AttrType.暴击率, "暴击率+{}%", 1.5, 4], // 提升强度
+                        [AttrType.破甲, "破甲+{}%", 1.5, 5],    // 提升强度
+                        [AttrType.暴击伤害, "暴击伤害+{}%", 8, 16] // 提升强度
+                    ],
+                    [Part.鞋子]: [
+                        [AttrType.速度, "速度+{}", 2, 6],      // 提升强度
+                        [AttrType.闪避, "闪避+{}%", 2, 5],      // 提升强度
+                        [AttrType.减伤, "伤害减免+{}%", 1.5, 4], // 提升强度
+                        [AttrType.生命, "生命+{}", 15, 45]      // 提升强度
+                    ],
+                    [Part.饰品]: [
+                        [AttrType.暴击伤害, "暴击伤害+{}%", 10, 20], // 提升强度
+                        [AttrType.吸血, "吸血+{}%", 2, 4],        // 提升强度
+                        [AttrType.攻击, "攻击+{}", 3, 10],        // 提升强度
+                        [AttrType.生命, "生命+{}", 15, 45]        // 提升强度
+                    ]
+                },
                 
                 // 属性品质
                 AFFIX_QUALITY: ["普通", "优秀", "稀有", "完美", "极致"],
@@ -3368,7 +3484,8 @@
                     [AttrType.破甲]: 0.0,
                     [AttrType.减伤]: 0.0,
                     [AttrType.格挡]: 0.05,
-                    [AttrType.闪避]: 0.03
+                    [AttrType.闪避]: 0.03,
+                    [AttrType.速度]: 0.0
                 },
                 
                 // 每级提升值（1~30级前期）
@@ -3382,7 +3499,8 @@
                     [AttrType.破甲]: 0.002,  // 解锁后每级+0.2%破甲
                     [AttrType.减伤]: 0.001,  // 解锁后每级+0.1%减伤
                     [AttrType.格挡]: 0.003,  // 每级+0.3%格挡
-                    [AttrType.闪避]: 0.002   // 每级+0.2%闪避
+                    [AttrType.闪避]: 0.002,  // 每级+0.2%闪避
+                    [AttrType.速度]: 0.003   // 每级+0.3%速度
                 },
                 
                 // 升级加成值（养成系统）
@@ -3396,7 +3514,8 @@
                     [AttrType.破甲]: 0.002,  // 解锁后每级+0.2%破甲
                     [AttrType.减伤]: 0.001,  // 解锁后每级+0.1%减伤
                     [AttrType.格挡]: 0.003,  // 每级+0.3%格挡
-                    [AttrType.闪避]: 0.002   // 每级+0.2%闪避
+                    [AttrType.闪避]: 0.002,  // 每级+0.2%闪避
+                    [AttrType.速度]: 0.003   // 每级+0.3%速度
                 },
                 
                 // 属性点分配加成值
@@ -3418,7 +3537,8 @@
                         [AttrType.破甲]: 0.001,    // 解锁后每级+0.1%破甲
                         [AttrType.减伤]: 0.002,    // 解锁后每级+0.2%减伤
                         [AttrType.格挡]: 0.005,    // 每级+0.5%格挡
-                        [AttrType.闪避]: 0.001     // 每级+0.1%闪避
+                        [AttrType.闪避]: 0.001,    // 每级+0.1%闪避
+                        [AttrType.速度]: 0.002     // 每级+0.2%速度
                     },
                     法师: {
                         [AttrType.攻击]: 2.5,      // 每级+2.5点攻击
@@ -3430,7 +3550,8 @@
                         [AttrType.破甲]: 0.003,    // 解锁后每级+0.3%破甲
                         [AttrType.减伤]: 0.001,    // 解锁后每级+0.1%减伤
                         [AttrType.格挡]: 0.001,    // 每级+0.1%格挡
-                        [AttrType.闪避]: 0.003     // 每级+0.3%闪避
+                        [AttrType.闪避]: 0.003,    // 每级+0.3%闪避
+                        [AttrType.速度]: 0.004     // 每级+0.4%速度
                     }
                 }
             };
@@ -3517,7 +3638,8 @@
                 [AttrType.暴击伤害, "暴击伤害+{}%", 6, 14],
                 [AttrType.吸血, "吸血+{}%", 1, 2.5],
                 [AttrType.破甲, "破甲+{}%", 1.5, 4.5],
-                [AttrType.减伤, "伤害减免+{}%", 1.5, 3.5]
+                [AttrType.减伤, "伤害减免+{}%", 1.5, 3.5],
+                [AttrType.速度, "速度+{}", 1.5, 4.5]
             ];
 
             const AFFIX_QUALITY = ["普通", "优秀", "稀有", "完美", "极致"];
@@ -3758,29 +3880,29 @@
                 }
             }
             // 装备类
-            // 套装定义
+            // 套装定义（强化套装效果）
             const EquipmentSets = {
                 新手套装: {
-                    requiredParts: [Part.武器, Part.防具, Part.饰品],
+                    requiredParts: [Part.武器, Part.头盔, Part.胸甲, Part.护腕, Part.鞋子, Part.饰品],
                     bonuses: {
-                        2: { [AttrType.攻击]: 5, [AttrType.防御]: 3 },
-                        3: { [AttrType.攻击]: 10, [AttrType.防御]: 6, [AttrType.生命]: 50 }
+                        2: { [AttrType.攻击]: 8, [AttrType.防御]: 5, [AttrType.生命]: 60 },  // 强化效果
+                        3: { [AttrType.攻击]: 15, [AttrType.防御]: 10, [AttrType.生命]: 120, [AttrType.暴击率]: 0.03 } // 强化效果
                     }
                 },
                 勇者套装: {
-                    requiredParts: [Part.武器, Part.防具, Part.饰品, Part.护符],
+                    requiredParts: [Part.武器, Part.头盔, Part.胸甲, Part.护腕, Part.鞋子, Part.饰品],
                     bonuses: {
-                        2: { [AttrType.攻击]: 10, [AttrType.防御]: 5 },
-                        3: { [AttrType.攻击]: 20, [AttrType.防御]: 10, [AttrType.生命]: 100 },
-                        4: { [AttrType.攻击]: 30, [AttrType.防御]: 15, [AttrType.生命]: 200, [AttrType.暴击率]: 0.05 }
+                        2: { [AttrType.攻击]: 15, [AttrType.防御]: 8, [AttrType.生命]: 100 }, // 强化效果
+                        3: { [AttrType.攻击]: 30, [AttrType.防御]: 15, [AttrType.生命]: 200, [AttrType.暴击率]: 0.08 }, // 强化效果
+                        4: { [AttrType.攻击]: 45, [AttrType.防御]: 25, [AttrType.生命]: 350, [AttrType.暴击率]: 0.12, [AttrType.暴击伤害]: 0.15 } // 强化效果
                     }
                 },
                 传说套装: {
-                    requiredParts: [Part.武器, Part.防具, Part.饰品, Part.护符],
+                    requiredParts: [Part.武器, Part.头盔, Part.胸甲, Part.护腕, Part.鞋子, Part.饰品],
                     bonuses: {
-                        2: { [AttrType.攻击]: 20, [AttrType.防御]: 10 },
-                        3: { [AttrType.攻击]: 40, [AttrType.防御]: 20, [AttrType.生命]: 200, [AttrType.暴击率]: 0.1 },
-                        4: { [AttrType.攻击]: 60, [AttrType.防御]: 30, [AttrType.生命]: 400, [AttrType.暴击率]: 0.15, [AttrType.暴击伤害]: 0.2 }
+                        2: { [AttrType.攻击]: 25, [AttrType.防御]: 15, [AttrType.生命]: 150, [AttrType.暴击率]: 0.05 }, // 强化效果
+                        3: { [AttrType.攻击]: 50, [AttrType.防御]: 30, [AttrType.生命]: 300, [AttrType.暴击率]: 0.15, [AttrType.暴击伤害]: 0.1 }, // 强化效果
+                        4: { [AttrType.攻击]: 80, [AttrType.防御]: 45, [AttrType.生命]: 500, [AttrType.暴击率]: 0.2, [AttrType.暴击伤害]: 0.25, [AttrType.吸血]: 0.05 } // 强化效果
                     }
                 }
             };
@@ -3815,19 +3937,25 @@
 
                 _generateName() {
                     const weapon_names = ["铁剑","钢剑","烈风刃","破苍剑","龙炎刀","灭世剑","鸿蒙刃"];
-                    const armor_names = ["布衣","皮甲","铁甲","玄铁甲","龙鳞甲","不灭甲","混沌甲"];
+                    const helmet_names = ["布帽","皮帽","铁盔","玄铁盔","龙鳞盔","不灭盔","混沌盔"];
+                    const chest_names = ["布衣","皮甲","铁甲","玄铁甲","龙鳞甲","不灭甲","混沌甲"];
+                    const gloves_names = ["布护腕","皮护腕","铁护腕","玄铁护腕","龙鳞护腕","不灭护腕","混沌护腕"];
+                    const shoes_names = ["布鞋","皮靴","铁靴","玄铁靴","龙鳞靴","不灭靴","混沌靴"];
                     const accessory_names = ["铜戒指","银戒指","金戒指","魔法戒指","龙鳞戒指","天使戒指","混沌指环"];
-                    const talisman_names = ["铜护符","银护符","金护符","魔法护符","龙鳞护符","天使护符","混沌护符"];
                     const prefix = ["","精良","秘法","嗜血","破魔","战神","神话"][this.rarityValue];
                     let base;
                     if (this.part === Part.武器) {
                         base = weapon_names[this.rarityValue];
-                    } else if (this.part === Part.防具) {
-                        base = armor_names[this.rarityValue];
+                    } else if (this.part === Part.头盔) {
+                        base = helmet_names[this.rarityValue];
+                    } else if (this.part === Part.胸甲) {
+                        base = chest_names[this.rarityValue];
+                    } else if (this.part === Part.护腕) {
+                        base = gloves_names[this.rarityValue];
+                    } else if (this.part === Part.鞋子) {
+                        base = shoes_names[this.rarityValue];
                     } else if (this.part === Part.饰品) {
                         base = accessory_names[this.rarityValue];
-                    } else if (this.part === Part.护符) {
-                        base = talisman_names[this.rarityValue];
                     } else {
                         base = accessory_names[this.rarityValue];
                     }
@@ -3841,23 +3969,35 @@
                     const base_crit = [3,3.5,4,5,6,7.5,9][this.rarityValue] / 100;
                     const base_vamp = [1,1.5,2,2.5,3,4,5][this.rarityValue] / 100;
                     const base_crit_dmg = [5,7.5,10,12.5,15,17.5,20][this.rarityValue] / 100;
+                    const base_speed = [1,1.5,2,2.5,3,4,5][this.rarityValue];
+                    const base_dodge = [1,1.5,2,2.5,3,4,5][this.rarityValue] / 100;
+                    const base_damage_reduction = [1,1.5,2,2.5,3,4,5][this.rarityValue] / 100;
 
                     if (this.part === Part.武器) {
+                        // 武器：高攻击、暴击
                         this.baseAttr = {[AttrType.攻击]: base_atk, [AttrType.暴击率]: base_crit};
-                    } else if (this.part === Part.防具) {
-                        this.baseAttr = {[AttrType.生命]: base_hp, [AttrType.防御]: base_def, [AttrType.吸血]: base_vamp};
+                    } else if (this.part === Part.头盔) {
+                        // 头盔：生命、防御
+                        this.baseAttr = {[AttrType.生命]: base_hp, [AttrType.防御]: base_def};
+                    } else if (this.part === Part.胸甲) {
+                        // 胸甲：高防御、生命、减伤
+                        this.baseAttr = {[AttrType.防御]: base_def * 1.2, [AttrType.生命]: base_hp, [AttrType.减伤]: base_damage_reduction};
+                    } else if (this.part === Part.护腕) {
+                        // 护腕：攻击、暴击
+                        this.baseAttr = {[AttrType.攻击]: base_atk * 0.8, [AttrType.暴击率]: base_crit};
+                    } else if (this.part === Part.鞋子) {
+                        // 鞋子：速度、闪避
+                        this.baseAttr = {[AttrType.速度]: base_speed, [AttrType.闪避]: base_dodge};
                     } else if (this.part === Part.饰品) {
-                        // 饰品：综合属性
-                        this.baseAttr = {[AttrType.攻击]: base_atk * 0.5, [AttrType.生命]: base_hp * 0.5, [AttrType.暴击伤害]: base_crit_dmg};
-                    } else if (this.part === Part.护符) {
-                        // 护符：特殊属性
-                        this.baseAttr = {[AttrType.攻击]: base_atk * 0.4, [AttrType.生命]: base_hp * 0.4, [AttrType.暴击率]: base_crit * 0.8, [AttrType.吸血]: base_vamp * 0.8};
+                        // 饰品：暴击伤害、吸血
+                        this.baseAttr = {[AttrType.暴击伤害]: base_crit_dmg, [AttrType.吸血]: base_vamp};
                     } else {
                         // 默认使用饰品属性
                         this.baseAttr = {[AttrType.攻击]: base_atk * 0.5, [AttrType.生命]: base_hp * 0.5, [AttrType.暴击伤害]: base_crit_dmg};
                     }
                 
-                    const affix_count = [1,2,3,3,4,4,5][this.rarityValue];
+                    // 减少词缀数量，根据品质调整
+                    const affix_count = [1, 2, 2, 3, 3, 3, 4][this.rarityValue]; // 减少词缀数量
                     this.affixes = [];
                     const used_types = new Set();
                     
@@ -3866,9 +4006,14 @@
                     const rarityBonus = 1 + this.rarityValue * 0.06; // 每级稀有度增加6%的范围
                     const totalBonus = levelBonus * rarityBonus;
                     
+                    // 使用类型专属词缀池
+                    const affixPool = EQUIPMENT_CONSTANTS.TYPE_AFFIX_POOLS[this.part] || AFFIX_POOL;
+                    
                     for (let i = 0; i < affix_count; i++) {
-                        const available_affixes = AFFIX_POOL.filter(affix => !used_types.has(affix[0]));
-                        const affix = available_affixes.length > 0 ? available_affixes[Math.floor(Math.random() * available_affixes.length)] : AFFIX_POOL[Math.floor(Math.random() * AFFIX_POOL.length)];
+                        const available_affixes = affixPool.filter(affix => !used_types.has(affix[0]));
+                        if (available_affixes.length === 0) break; // 没有可用词缀时停止
+                        
+                        const affix = available_affixes[Math.floor(Math.random() * available_affixes.length)];
                         used_types.add(affix[0]);
                         
                         const quality_weights = this.rarityValue < 3 ? [0.5, 0.3, 0.15, 0.04, 0.01] : [0.3, 0.3, 0.25, 0.1, 0.05];
@@ -3880,10 +4025,10 @@
                         const adjustedMin = Math.floor(min_v * totalBonus);
                         const adjustedMax = Math.floor(max_v * totalBonus);
                         
-                        // 对于饰品和护符，攻击和生命属性需要额外减半
+                        // 对于饰品，攻击和生命属性需要额外减半
                         let finalMin = adjustedMin;
                         let finalMax = adjustedMax;
-                        if ((this.part === Part.饰品 || this.part === Part.护符) && (typ === AttrType.攻击 || typ === AttrType.生命)) {
+                        if (this.part === Part.饰品 && (typ === AttrType.攻击 || typ === AttrType.生命)) {
                             finalMin = Math.floor(adjustedMin * 0.5);
                             finalMax = Math.floor(adjustedMax * 0.5);
                         }
@@ -4055,6 +4200,9 @@
                     // 减伤
                     refineRanges.push([AttrType.减伤, `减伤：${affixRanges[AttrType.减伤].min}-${affixRanges[AttrType.减伤].max}%`]);
                     
+                    // 速度
+                    refineRanges.push([AttrType.速度, `速度：${affixRanges[AttrType.速度].min}-${affixRanges[AttrType.速度].max}%`]);
+                    
                     return refineRanges;
                 }
                 
@@ -4106,9 +4254,12 @@
                 _generateName() {
                     const itemNames = {
                         potion: ["小型生命药水", "中型生命药水", "大型生命药水", "超级生命药水", "神圣生命药水"],
-                        mana: ["小型魔法药水", "中型魔法药水", "大型魔法药水", "超级魔法药水", "神圣魔法药水"],
                         scroll: ["力量卷轴", "防御卷轴", "敏捷卷轴", "智慧卷轴", "幸运卷轴"],
-                        stone: ["强化石", "精炼石", "祝福石", "灵魂石", "混沌石"]
+                        stone: ["强化石", "精炼石", "祝福石", "灵魂石", "混沌石"],
+                        exp: ["小型经验药水", "中型经验药水", "大型经验药水", "超级经验药水", "神圣经验药水"],
+                        gold: ["小钱袋", "中钱袋", "大钱袋", "巨钱袋", "宝箱"],
+                        combat: ["暴击药水", "闪避药水", "格挡药水", "攻击药水", "防御药水"],
+                        special: ["无敌药水", "反伤药水", "吸血药水", "速度药水", "全能药水"]
                     };
                     const tier = Math.min(Math.floor(this.level / 10), itemNames[this.type].length - 1);
                     return itemNames[this.type][tier];
@@ -4117,9 +4268,12 @@
                 _generateDescription() {
                     const descriptions = {
                         potion: "恢复生命值",
-                        mana: "恢复魔法值",
                         scroll: "临时提升属性",
-                        stone: "用于装备强化"
+                        stone: "用于装备强化",
+                        exp: "增加经验值",
+                        gold: "获得金币",
+                        combat: "提升战斗属性",
+                        special: "特殊效果"
                     };
                     return descriptions[this.type] || "未知物品";
                 }
@@ -4129,19 +4283,29 @@
                     switch (this.type) {
                         case 'potion':
                             return { type: 'heal', value: baseValue * 2 };
-                        case 'mana':
-                            return { type: 'mana', value: baseValue };
                         case 'scroll':
                             return { type: 'buff', attribute: ['attack', 'defense', 'dodge', 'block'][Math.floor(Math.random() * 4)], value: baseValue * 0.1, duration: 3 };
                         case 'stone':
                             return { type: 'enhance', successRate: Math.min(50 + this.level, 90) };
+                        case 'exp':
+                            return { type: 'exp', value: baseValue * 5 };
+                        case 'gold':
+                            return { type: 'gold', value: baseValue * 3 };
+                        case 'combat':
+                            const combatAttributes = ['crit', 'dodge', 'block', 'attack', 'defense'];
+                            const randomAttr = combatAttributes[Math.floor(Math.random() * combatAttributes.length)];
+                            return { type: 'combat_buff', attribute: randomAttr, value: baseValue * 0.15, duration: 2 };
+                        case 'special':
+                            const specialTypes = ['invincible', 'reflect', 'lifesteal', 'speed', 'all_stats'];
+                            const randomSpecial = specialTypes[Math.floor(Math.random() * specialTypes.length)];
+                            return { type: 'special', effect: randomSpecial, value: baseValue * 0.2, duration: 1 };
                         default:
                             return {};
                     }
                 }
 
                 _isStackable() {
-                    return ['potion', 'mana', 'scroll', 'stone'].includes(this.type);
+                    return ['potion', 'scroll', 'stone', 'exp', 'gold', 'combat', 'special'].includes(this.type);
                 }
 
                 use() {
@@ -4150,10 +4314,6 @@
                             player.hp = Math.min(player.hp + this.effect.value, player.max_hp);
                             showNotification(`使用了${this.name}，恢复了${this.effect.value}点生命值`);
                             return true;
-                        case 'mana':
-                            // 这里可以添加魔法值系统
-                            showNotification(`使用了${this.name}，恢复了${this.effect.value}点魔法值`);
-                            return true;
                         case 'buff':
                             // 这里可以添加buff系统
                             showNotification(`使用了${this.name}，${this.effect.attribute}提升了${this.effect.value * 100}%，持续${this.effect.duration}回合`);
@@ -4161,6 +4321,40 @@
                         case 'enhance':
                             // 这里可以添加装备强化系统
                             showNotification(`使用了${this.name}，强化成功率${this.effect.successRate}%`);
+                            return true;
+                        case 'exp':
+                            playerExp += this.effect.value;
+                            showNotification(`使用了${this.name}，获得了${this.effect.value}点经验值`);
+                            return true;
+                        case 'gold':
+                            playerGold += this.effect.value;
+                            showNotification(`使用了${this.name}，获得了${this.effect.value}金币`);
+                            return true;
+                        case 'combat_buff':
+                            // 这里可以添加战斗buff系统
+                            showNotification(`使用了${this.name}，${this.effect.attribute}提升了${this.effect.value * 100}%，持续${this.effect.duration}回合`);
+                            return true;
+                        case 'special':
+                            // 这里可以添加特殊效果系统
+                            let effectText = '';
+                            switch (this.effect.effect) {
+                                case 'invincible':
+                                    effectText = '无敌效果，持续1回合';
+                                    break;
+                                case 'reflect':
+                                    effectText = '反伤效果，持续1回合';
+                                    break;
+                                case 'lifesteal':
+                                    effectText = '吸血效果，持续1回合';
+                                    break;
+                                case 'speed':
+                                    effectText = '速度提升，持续1回合';
+                                    break;
+                                case 'all_stats':
+                                    effectText = '全属性提升，持续1回合';
+                                    break;
+                            }
+                            showNotification(`使用了${this.name}，${effectText}`);
                             return true;
                         default:
                             return false;
@@ -4194,9 +4388,12 @@
             // 物品类型常量
             const ItemType = {
                 POTION: 'potion',
-                MANA: 'mana',
                 SCROLL: 'scroll',
-                STONE: 'stone'
+                STONE: 'stone',
+                EXP: 'exp',
+                GOLD: 'gold',
+                COMBAT: 'combat',
+                SPECIAL: 'special'
             };
 
             // 显示提示信息的函数
@@ -4997,9 +5194,12 @@
             function getTypeName(type) {
                 const typeNames = {
                     potion: '生命药水',
-                    mana: '魔法药水',
                     scroll: '卷轴',
-                    stone: '强化石'
+                    stone: '强化石',
+                    exp: '经验药水',
+                    gold: '钱袋',
+                    combat: '战斗药水',
+                    special: '特殊药水'
                 };
                 return typeNames[type] || '其他物品';
             }
@@ -5008,9 +5208,12 @@
             function getItemTypeIcon(type) {
                 const icons = {
                     potion: '❤️',
-                    mana: '💙',
                     scroll: '📜',
-                    stone: '💎'
+                    stone: '💎',
+                    exp: '⭐',
+                    gold: '💰',
+                    combat: '⚔️',
+                    special: '✨'
                 };
                 return icons[type] || '📦';
             }
@@ -5019,9 +5222,12 @@
             function getItemIcon(type) {
                 const icons = {
                     potion: '❤️',
-                    mana: '💙',
                     scroll: '📜',
-                    stone: '💎'
+                    stone: '💎',
+                    exp: '⭐',
+                    gold: '💰',
+                    combat: '⚔️',
+                    special: '✨'
                 };
                 return icons[type] || '📦';
             }
@@ -5031,12 +5237,36 @@
                 switch (item.effect.type) {
                     case 'heal':
                         return `恢复 ${item.effect.value} 生命值`;
-                    case 'mana':
-                        return `恢复 ${item.effect.value} 魔法值`;
                     case 'buff':
                         return `${item.effect.attribute} +${item.effect.value * 100}% (${item.effect.duration}回合)`;
                     case 'enhance':
                         return `强化成功率 ${item.effect.successRate}%`;
+                    case 'exp':
+                        return `获得 ${item.effect.value} 经验值`;
+                    case 'gold':
+                        return `获得 ${item.effect.value} 金币`;
+                    case 'combat_buff':
+                        return `${item.effect.attribute} +${item.effect.value * 100}% (${item.effect.duration}回合)`;
+                    case 'special':
+                        let effectText = '';
+                        switch (item.effect.effect) {
+                            case 'invincible':
+                                effectText = '无敌效果，持续1回合';
+                                break;
+                            case 'reflect':
+                                effectText = '反伤效果，持续1回合';
+                                break;
+                            case 'lifesteal':
+                                effectText = '吸血效果，持续1回合';
+                                break;
+                            case 'speed':
+                                effectText = '速度提升，持续1回合';
+                                break;
+                            case 'all_stats':
+                                effectText = '全属性提升，持续1回合';
+                                break;
+                        }
+                        return effectText;
                     default:
                         return '未知效果';
                 }
@@ -6458,7 +6688,7 @@
                     {
                         name: '不朽之铠',
                         type: 'equipment',
-                        part: Part.防具,
+                        part: Part.胸甲,
                         rarity: '神话',
                         description: '由天外陨石打造的铠甲，刀枪不入',
                         stats: {
@@ -6470,7 +6700,7 @@
                     {
                         name: '命运护符',
                         type: 'equipment',
-                        part: Part.护符,
+                        part: Part.饰品,
                         rarity: '传说',
                         description: '能够改变命运的神秘护符，提升所有属性',
                         stats: {
@@ -6549,7 +6779,7 @@
                 
                 // 生成装备
                 generateEquipment(level, betterDrop = false) {
-                    const equipmentTypes = [Part.武器, Part.防具, Part.饰品, Part.护符];
+                    const equipmentTypes = [Part.武器, Part.头盔, Part.胸甲, Part.护腕, Part.鞋子, Part.饰品];
                     const randomType = equipmentTypes[Math.floor(Math.random() * equipmentTypes.length)];
                     const equipment = new Equipment(randomType, level);
                     
@@ -6571,7 +6801,7 @@
                 
                 // 生成道具
                 generateItem(level, betterDrop = false) {
-                    const itemTypes = ['potion', 'mana', 'scroll', 'stone'];
+                    const itemTypes = ['potion', 'scroll', 'stone', 'exp', 'gold', 'combat', 'special'];
                     const randomItemType = itemTypes[Math.floor(Math.random() * itemTypes.length)];
                     return new Item(randomItemType, level);
                 },
@@ -6596,18 +6826,26 @@
                             equipmentList.weapons.push(equipment);
                             refreshEquipmentList('weapon');
                             return Object.keys(Part)[Part.武器];
-                        case Part.防具:
+                        case Part.头盔:
                             equipmentList.armors.push(equipment);
                             refreshEquipmentList('armor');
-                            return Object.keys(Part)[Part.防具];
+                            return Object.keys(Part)[Part.头盔];
+                        case Part.胸甲:
+                            equipmentList.armors.push(equipment);
+                            refreshEquipmentList('armor');
+                            return Object.keys(Part)[Part.胸甲];
+                        case Part.护腕:
+                            equipmentList.armors.push(equipment);
+                            refreshEquipmentList('armor');
+                            return Object.keys(Part)[Part.护腕];
+                        case Part.鞋子:
+                            equipmentList.armors.push(equipment);
+                            refreshEquipmentList('armor');
+                            return Object.keys(Part)[Part.鞋子];
                         case Part.饰品:
                             equipmentList.accessories.push(equipment);
                             refreshEquipmentList('accessory');
                             return Object.keys(Part)[Part.饰品];
-                        case Part.护符:
-                            equipmentList.talismans.push(equipment);
-                            refreshEquipmentList('talisman');
-                            return Object.keys(Part)[Part.护符];
                         default:
                             return '未知装备';
                     }
@@ -8027,6 +8265,7 @@
                 const base_hp = 100;
                 const base_atk = 12;
                 const base_def = 6;
+                const base_speed = 5;
                 const growth_rate = 1.06;
                 
                 // 根据游戏模式调整强度倍率
@@ -8035,23 +8274,77 @@
                     modeMultiplier = 1.0; // 挑战模式：基础倍率设为1.0，后续会有boss专属倍率
                 }
 
+                // 随机生成怪物类型
+                const monsterTypes = ['balanced', 'attack', 'defense', 'agile'];
+                const monsterType = monsterTypes[Math.floor(Math.random() * monsterTypes.length)];
+
                 const m = {
                     name: "怪物",
                     level: level,
                     hp: Math.floor(base_hp * (growth_rate ** (level-1)) * modeMultiplier),
                     max_hp: 0,
                     attrs: {},
-                    is_boss: isBossMode || (level % 10 === 0 && level > 0)
+                    is_boss: isBossMode || (level % 10 === 0 && level > 0),
+                    type: monsterType
                 };
                 m.max_hp = m.hp;
-                m.attrs[AttrType.攻击] = Math.floor(base_atk * (growth_rate ** (level-1)) * modeMultiplier);
-                m.attrs[AttrType.防御] = Math.floor(base_def * (growth_rate ** (level-1)) * modeMultiplier);
+                
+                // 基础属性计算
+                let baseAttack = base_atk * (growth_rate ** (level-1)) * modeMultiplier;
+                let baseDefense = base_def * (growth_rate ** (level-1)) * modeMultiplier;
+                let baseSpeedValue = base_speed * (growth_rate ** (level-1)) * modeMultiplier;
+                
+                // 添加随机性
+                const attackVariation = baseAttack * (0.9 + Math.random() * 0.2); // ±10%
+                const defenseVariation = baseDefense * (0.9 + Math.random() * 0.2); // ±10%
+                const speedVariation = baseSpeedValue * (0.85 + Math.random() * 0.3); // ±15%
+                
+                // 根据怪物类型调整属性
+                switch (monsterType) {
+                    case 'attack':
+                        baseAttack *= 1.2;
+                        baseDefense *= 0.9;
+                        break;
+                    case 'defense':
+                        baseDefense *= 1.2;
+                        baseAttack *= 0.9;
+                        break;
+                    case 'agile':
+                        baseSpeedValue *= 1.3;
+                        break;
+                    case 'balanced':
+                    default:
+                        break;
+                }
+                
+                // 设置最终属性
+                m.attrs[AttrType.攻击] = Math.floor(attackVariation);
+                m.attrs[AttrType.防御] = Math.floor(defenseVariation);
                 m.attrs[AttrType.生命] = m.hp;
-                m.attrs[AttrType.暴击率] = 0.08;
-                m.attrs[AttrType.暴击伤害] = 0.25;
-                m.attrs[AttrType.吸血] = 0.0;
-                m.attrs[AttrType.破甲] = 0.0;
-                m.attrs[AttrType.减伤] = 0.0;
+                m.attrs[AttrType.暴击率] = 0.05 + Math.random() * 0.07; // 5-12%
+                m.attrs[AttrType.暴击伤害] = 0.2 + Math.random() * 0.15; // 20-35%
+                m.attrs[AttrType.速度] = Math.floor(speedVariation);
+                
+                // 添加高级属性
+                if (m.is_boss) {
+                    // BOSS必带1-2种高级属性
+                    const advancedAttrs = [AttrType.吸血, AttrType.破甲, AttrType.减伤, AttrType.格挡, AttrType.闪避];
+                    const selectedAttrs = [];
+                    while (selectedAttrs.length < 2 && selectedAttrs.length < advancedAttrs.length) {
+                        const attr = advancedAttrs[Math.floor(Math.random() * advancedAttrs.length)];
+                        if (!selectedAttrs.includes(attr)) {
+                            selectedAttrs.push(attr);
+                            m.attrs[attr] = 0.1 + Math.random() * 0.1; // 10-20%
+                        }
+                    }
+                } else if (level >= 5) {
+                    // 普通怪物有几率获得高级属性
+                    if (Math.random() < 0.3) { // 30%几率
+                        const advancedAttrs = [AttrType.吸血, AttrType.破甲, AttrType.减伤];
+                        const attr = advancedAttrs[Math.floor(Math.random() * advancedAttrs.length)];
+                        m.attrs[attr] = Math.random() * 0.05; // 0-5%
+                    }
+                }
 
                 if (m.is_boss) {
                     // 为每10关的BOSS设置不同的名称
@@ -8100,6 +8393,20 @@
                         m.attrs[AttrType.攻击] = Math.floor(storyAtk * difficultyReducer);
                         m.attrs[AttrType.防御] = Math.floor(storyDef * difficultyReducer);
                         m.attrs[AttrType.生命] = m.hp;
+                        m.attrs[AttrType.暴击率] = 0.05 + Math.random() * 0.07; // 5-12%
+                        m.attrs[AttrType.暴击伤害] = 0.2 + Math.random() * 0.15; // 20-35%
+                        m.attrs[AttrType.速度] = Math.floor(5 * (storyGrowthRate ** (equivalentStoryLevel - 1)) * difficultyReducer);
+                        
+                        // BOSS必带1-2种高级属性
+                        const advancedAttrs = [AttrType.吸血, AttrType.破甲, AttrType.减伤, AttrType.格挡, AttrType.闪避];
+                        const selectedAttrs = [];
+                        while (selectedAttrs.length < 2 && selectedAttrs.length < advancedAttrs.length) {
+                            const attr = advancedAttrs[Math.floor(Math.random() * advancedAttrs.length)];
+                            if (!selectedAttrs.includes(attr)) {
+                                selectedAttrs.push(attr);
+                                m.attrs[attr] = 0.1 + Math.random() * 0.1; // 10-20%
+                            }
+                        }
                         
                         // 设置技能（使用实际挑战模式关卡等级对应的技能，而不是等效等级）
                         m.skill_list = BOSS_SKILLS[level.toString()] || BOSS_SKILLS["10"] || BOSS_SKILLS["20"];
@@ -8113,6 +8420,7 @@
                         m.max_hp = m.hp;
                         m.attrs[AttrType.攻击] = Math.floor(m.attrs[AttrType.攻击] * multiplier);
                         m.attrs[AttrType.防御] = Math.floor(m.attrs[AttrType.防御] * multiplier);
+                        m.attrs[AttrType.速度] = Math.floor(m.attrs[AttrType.速度] * multiplier);
                         m.skill_list = BOSS_SKILLS[level.toString()] || BOSS_SKILLS["10"] || BOSS_SKILLS["20"];
                         m.skill_cd = {"skill1": 0, "skill2": 0};
                     }
@@ -8122,6 +8430,7 @@
 
             // 更新状态面板
             function updateStatus() {
+                //更新队伍信息
                 updateTeamStatus();
                 
                 // 更新怪物信息
@@ -8145,7 +8454,7 @@
                                         return `
                                             <div class="monster-card ${isDead ? 'monster-dead' : ''}">
                                                 <div>🧟 ${monster.name}：${Math.round(monster.hp)}/${Math.round(monster.max_hp)} (${monsterHpPercent.toFixed(0)}%) ${isDead ? '(已死亡)' : ''}</div>
-                                                <div>⚔️ 攻击：${Math.floor(monster.attrs[AttrType.攻击])} | 🛡️ 防御：${Math.floor(monster.attrs[AttrType.防御])}</div>
+                                                <div>⚔️ 攻击：${Math.floor(monster.attrs[AttrType.攻击])} | 🛡️ 防御：${Math.floor(monster.attrs[AttrType.防御])} | ⚡ 速度：${(monster.attrs[AttrType.速度] || 0).toFixed(1)}</div>
                                                 <div class="hp-bar-container">
                                                     <div class="monster-hp-bar" style="width: ${monsterHpPercent}%; ${isDead ? 'background-color: #ff4444;' : ''}"></div>
                                                 </div>
@@ -8415,14 +8724,14 @@
                     dom.attackBtn.style.opacity = "0.7";
                 }
 
-                addLog(`【第${roundNum}回合】—— 队伍回合 ——`);
+                addLog(`【第${roundNum}回合】—— 战斗回合 ——`);
                 
-                // 获取活着的玩家角色
-                const aliveCharacters = playerTeam.filter(char => char.hp > 0);
+                // 计算基于速度的全局战斗顺序
+                const turnOrder = calculateTurnOrder();
                 
-                if (aliveCharacters.length === 0) {
-                    // 所有角色死亡，结束战斗
-                    addLog(`💀 所有队伍成员都已倒下！`, "log-lose");
+                if (turnOrder.length === 0) {
+                    // 所有单位死亡，结束战斗
+                    addLog(`💀 所有战斗单位都已倒下！`, "log-lose");
                     endBattle(false);
                     Win = false;
                     
@@ -8434,39 +8743,118 @@
                     return;
                 }
                 
-                // 确保currentAttackerIndex在有效范围内
-                if (currentAttackerIndex >= aliveCharacters.length) {
-                    currentAttackerIndex = 0;
+                // 执行所有单位的行动
+                let unitIndex = 0;
+                
+                function nextUnitAction() {
+                    if (unitIndex < turnOrder.length) {
+                        const currentUnit = turnOrder[unitIndex];
+                        
+                        // 检查单位是否仍然活着
+                        if (currentUnit.hp > 0) {
+                            if (playerTeam.includes(currentUnit)) {
+                                // 玩家角色行动
+                                performCharacterAttack(currentUnit, () => {
+                                    unitIndex++;
+                                    nextUnitAction();
+                                });
+                            } else {
+                                // 怪物行动
+                                setTimeout(() => {
+                                    monsterAttack(currentUnit);
+                                    unitIndex++;
+                                    nextUnitAction();
+                                }, 1000);
+                            }
+                        } else {
+                            // 单位已死亡，跳过
+                            unitIndex++;
+                            nextUnitAction();
+                        }
+                    } else {
+                        // 所有单位行动结束，回合结束
+                        finishBattleTurn();
+                    }
                 }
                 
-                // 获取当前要攻击的角色
-                const currentCharacter = aliveCharacters[currentAttackerIndex];
+                // 开始执行行动
+                nextUnitAction();
+            }
+
+            // 统一战斗处理函数
+            function handleCombat(attacker, defender, isPlayerAttack = true) {
+                // 检查闪避
+                const dodgeChance = defender.attrs[AttrType.闪避] || 0;
+                if (Math.random() < dodgeChance) {
+                    return {
+                        success: false,
+                        type: 'dodge',
+                        damage: 0,
+                        message: `✨ ${attacker.name}发起攻击！${defender.name}成功闪避了攻击！`
+                    };
+                }
                 
-                // 更新技能页面为当前角色
-                updateSkillPageForCharacter(currentCharacter);
+                // 计算基础伤害
+                let raw_dmg = attacker.attrs[AttrType.攻击] * (1 - defender.attrs[AttrType.防御]/(defender.attrs[AttrType.防御]+120));
+                // 应用破甲效果
+                raw_dmg *= (1 + (attacker.attrs[AttrType.破甲] || 0));
                 
-                // 执行当前角色的攻击
-                performCharacterAttack(currentCharacter, (damage) => {
-                    // 攻击完成后，更新攻击索引
-                    currentAttackerIndex++;
-                    
-                    // 检查是否所有角色都已攻击过
-                    if (currentAttackerIndex >= aliveCharacters.length) {
-                        // 所有角色攻击结束，进入怪物回合
-                        finishPlayerTeamAttack(damage);
-                    } else {
-                        // 还有角色未攻击，更新技能页面为下一个角色
-                        const nextCharacter = aliveCharacters[currentAttackerIndex];
-                        updateSkillPageForCharacter(nextCharacter);
-                        
-                        // 启用攻击按钮，等待玩家点击
-                        isAttackInProgress = false;
-                        if (dom.attackBtn) {
-                            dom.attackBtn.disabled = false;
-                            dom.attackBtn.style.opacity = "1";
-                        }
-                    }
-                });
+                let damage = Math.max(1, Math.round(raw_dmg));
+                
+                // 检查暴击
+                const isCrit = Math.random() < (attacker.attrs[AttrType.暴击率] || 0);
+                if (isCrit) {
+                    damage = Math.round(damage * (1 + (attacker.attrs[AttrType.暴击伤害] || 0)));
+                }
+                
+                // 检查格挡
+                const blockChance = defender.attrs[AttrType.格挡] || 0;
+                let blockReduction = 0;
+                let isBlocked = false;
+                
+                if (Math.random() < blockChance) {
+                    // 触发格挡
+                    isBlocked = true;
+                    // 按格挡属性比例减少伤害
+                    blockReduction = blockChance;
+                }
+                
+                // 应用格挡减伤
+                let blockedDamage = damage;
+                if (isBlocked) {
+                    damage = Math.max(1, Math.floor(damage * (1 - blockReduction)));
+                }
+                
+                // 应用减伤属性
+                let reducedDamage = Math.max(1, Math.floor(damage * (1 - (defender.attrs[AttrType.减伤] || 0))));
+                
+                // 构建返回结果
+                const result = {
+                    success: true,
+                    type: 'hit',
+                    damage: reducedDamage,
+                    isCrit: isCrit,
+                    isBlocked: isBlocked,
+                    blockedAmount: isBlocked ? Math.floor(blockedDamage - damage) : 0,
+                    damageReduced: damage - reducedDamage,
+                    messages: []
+                };
+                
+                // 构建消息
+                if (isCrit) {
+                    result.messages.push(`💥 ${attacker.name}暴击！对${defender.name}造成 <span class="crit-damage">${reducedDamage}</span> 点巨额伤害！`);
+                } else if (isBlocked) {
+                    result.messages.push(`🛡️ ${attacker.name}发起攻击！${defender.name}格挡了${result.blockedAmount}点伤害，实际受到${reducedDamage}点伤害！`);
+                } else {
+                    result.messages.push(`⚔️ ${attacker.name}攻击了${defender.name}，造成${reducedDamage}点伤害！`);
+                }
+                
+                // 添加减伤消息
+                if (result.damageReduced > 0) {
+                    result.messages.push(`🛡️ ${defender.name}的减伤效果减免了${result.damageReduced}点伤害！`);
+                }
+                
+                return result;
             }
 
             // 执行单个角色攻击
@@ -8485,29 +8873,58 @@
                 
                 const targetMonster = aliveMonsters[Math.floor(Math.random() * aliveMonsters.length)];
                 
-                // 计算伤害
-                let raw_dmg = character.attrs[AttrType.攻击] * (1 - targetMonster.attrs[AttrType.防御]/(targetMonster.attrs[AttrType.防御]+120));
-                raw_dmg *= (1 + (character.attrs[AttrType.破甲] || 0));
+                // 使用统一战斗处理函数
+                const combatResult = handleCombat(character, targetMonster, true);
                 
-                let dmg = Math.max(1, Math.round(raw_dmg));
-                
-                // 暴击
-                const isCrit = Math.random() < (character.attrs[AttrType.暴击率] || 0);
-                if (isCrit) {
-                    dmg = Math.round(dmg * (1 + (character.attrs[AttrType.暴击伤害] || 0)));
-                    addLog(`💥 ${character.name}暴击！对${targetMonster.name}造成 <span class="crit-damage">${dmg}</span> 点巨额伤害！`, "log-crit");
-                    showDamageAnimation(dmg, 'crit');
-                } else {
-                    addLog(`⚔️ ${character.name}攻击了${targetMonster.name}，造成${dmg}点伤害！`);
-                    showDamageAnimation(dmg, 'normal');
+                // 处理战斗结果
+                if (!combatResult.success) {
+                    // 闪避情况
+                    addLog(combatResult.message, "log-dodge");
+                    showSkillEffect('闪避');
+                    
+                    // 立即更新状态显示，包括怪物属性
+                    updateStatus();
+                    callback(0);
+                    return;
                 }
                 
-                targetMonster.hp = Math.max(0, Math.round(targetMonster.hp - dmg));
+                // 处理命中情况
+                const reducedDamage = combatResult.damage;
+                
+                // 显示战斗消息
+                combatResult.messages.forEach((message, index) => {
+                    if (combatResult.isCrit && index === 0) {
+                        addLog(message, "log-crit");
+                        showDamageAnimation(reducedDamage, 'crit');
+                    } else if (combatResult.isBlocked && index === 0) {
+                        addLog(message, "log-block");
+                        showDamageAnimation(reducedDamage, 'normal');
+                    } else {
+                        addLog(message);
+                    }
+                });
+                
+                // 应用伤害
+                targetMonster.hp = Math.max(0, Math.round(targetMonster.hp - reducedDamage));
                 
                 // 检查目标怪物是否死亡
                 if (targetMonster.hp <= 0) {
                     addLog(`💀 ${targetMonster.name}被击败了！`);
                 }
+                
+                // 吸血（基于角色伤害）
+                if (reducedDamage > 0 && (character.attrs[AttrType.吸血] || 0) > 0) {
+                    const heal = Math.round(reducedDamage * (character.attrs[AttrType.吸血] || 0));
+                    const maxHeal = Math.round(character.max_hp * 0.15);
+                    const actualHeal = Math.min(heal, maxHeal);
+                    if (actualHeal > 0) {
+                        character.hp = Math.min(Math.round(character.hp + actualHeal), character.max_hp);
+                        addLog(`🧛 ${character.name}吸血效果触发！回血${actualHeal}点，当前血量：${character.hp}`, "log-heal");
+                    }
+                }
+                
+                // 立即更新状态显示，包括角色和怪物属性
+                updateStatus();
                 
                 // 检查是否所有怪物都已死亡
                 const allMonstersDead = monsters.every(m => m.hp <= 0);
@@ -8523,29 +8940,48 @@
                         dom.attackBtn.disabled = false;
                         dom.attackBtn.style.opacity = "1";
                     }
-                    callback(dmg);
+                    callback(reducedDamage);
                     return;
                 }
                 
-                // 吸血（基于角色伤害）
-                if (dmg > 0 && (character.attrs[AttrType.吸血] || 0) > 0) {
-                    const heal = Math.round(dmg * (character.attrs[AttrType.吸血] || 0));
-                    const maxHeal = Math.round(character.max_hp * 0.15);
-                    const actualHeal = Math.min(heal, maxHeal);
-                    if (actualHeal > 0) {
-                        character.hp = Math.min(Math.round(character.hp + actualHeal), character.max_hp);
-                        addLog(`🧛 ${character.name}吸血效果触发！回血${actualHeal}点，当前血量：${character.hp}`, "log-heal");
+                // 检查是否所有角色都已死亡
+                const allCharactersDead = playerTeam.every(char => char.hp <= 0);
+                if (allCharactersDead) {
+                    addLog(`💀 所有队伍成员都已倒下！`, "log-lose");
+                    endBattle(false);
+                    Win = false;
+                    
+                    // 战斗结束，重新启用攻击按钮
+                    isAttackInProgress = false;
+                    if (dom.attackBtn) {
+                        dom.attackBtn.disabled = false;
+                        dom.attackBtn.style.opacity = "1";
                     }
+                    callback(reducedDamage);
+                    return;
                 }
                 
-                // 立即更新状态显示，包括怪物属性
-                updateTeamStatus();
-                
-                callback(dmg);
+                callback(reducedDamage);
             }
 
-            // 完成玩家队伍攻击
-            function finishPlayerTeamAttack(totalDamage) {
+            // 完成战斗回合
+            function finishBattleTurn() {
+                // 更新怪物状态
+                monsters.forEach(monster => {
+                    if (monster.hp > 0) {
+                        updateMonsterStatus(monster);
+                    }
+                });
+                
+                // 显示所有队伍成员的血量
+                playerTeam.forEach(character => {
+                    if (character.hp > 0) {
+                        addLog(`❤️ ${character.name}的剩余血量：${Math.round(character.hp)}/${Math.round(character.max_hp)}`);
+                    } else {
+                        addLog(`💀 ${character.name}已经倒下了！`);
+                    }
+                });
+
                 // 更新状态
                 updateTeamStatus();
 
@@ -8566,17 +9002,40 @@
                     return;
                 }
 
-                // 玩家回合结束，进入怪物回合
-                setTimeout(() => {
-                    startMonsterTurn();
+                // 检查是否所有角色都死亡
+                const allCharactersDead = playerTeam.every(char => char.hp <= 0);
+                if (allCharactersDead) {
+                    addLog(`💀 所有队伍成员都已倒下！`, "log-lose");
+                    endBattle(false);
+                    Win = false;
                     
-                    // 怪物回合结束后重新启用攻击按钮
+                    // 战斗结束，重新启用攻击按钮
                     isAttackInProgress = false;
                     if (dom.attackBtn) {
                         dom.attackBtn.disabled = false;
                         dom.attackBtn.style.opacity = "1";
                     }
-                }, 800);
+                    return;
+                }
+
+                // 技能冷却
+                if (skills) {
+                    skills.forEach(skill => skill.cooldown());
+                }
+
+                // 应用持续效果
+                applyOngoingEffects();
+                
+                // 回合结束，增加回合数
+                roundNum++;
+                addLog(`【第${roundNum}回合】—— 准备就绪 ——`);
+                
+                // 重新启用攻击按钮，等待玩家开始下一回合
+                isAttackInProgress = false;
+                if (dom.attackBtn) {
+                    dom.attackBtn.disabled = false;
+                    dom.attackBtn.style.opacity = "1";
+                }
             }
 
             // 更新队伍状态显示
@@ -8602,7 +9061,7 @@
                                 return `
                                     <div class="character-status ${isDead ? 'character-dead' : ''}">
                                         <div>${character.name}（${character.class}）：${Math.round(character.hp)}/${character.max_hp} (${hpPercent.toFixed(0)}%) ${isDead ? '(已死亡)' : ''}</div>
-                                        <div>⚔️ 攻击：${Math.floor((character.attrs[AttrType.攻击] || 0))} | 🛡️ 防御：${Math.floor((character.attrs[AttrType.防御] || 0))}</div>
+                                        <div>⚔️ 攻击：${Math.floor((character.attrs[AttrType.攻击] || 0))} | 🛡️ 防御：${Math.floor((character.attrs[AttrType.防御] || 0))} | ⚡ 速度：${((character.attrs[AttrType.速度] || 0)).toFixed(1)}</div>
                                         <div class="hp-bar-container">
                                             <div class="player-hp-bar" style="width: ${hpPercent}%; ${isDead ? 'background-color: #ff4444;' : ''}"></div>
                                         </div>
@@ -8619,40 +9078,7 @@
                 updateMonsterInfo();
             }
 
-            // 开始怪物回合
-            function startMonsterTurn() {
-                if (!isBattleActive || !monsters || monsters.length === 0) return;
 
-                addLog(`【第${roundNum}回合】—— 怪物回合 ——`);
-                
-                // 获取活着的怪物
-                const aliveMonsters = monsters.filter(m => m.hp > 0);
-                
-                if (aliveMonsters.length > 0) {
-                    // 依次执行每个怪物的攻击逻辑
-                    let monsterIndex = 0;
-                    
-                    function nextMonsterAttack() {
-                        // 检查是否还有活着的队伍成员
-                        const aliveCharacters = playerTeam.filter(char => char.hp > 0);
-                        if (monsterIndex < aliveMonsters.length && aliveCharacters.length > 0) {
-                            const monster = aliveMonsters[monsterIndex];
-                            monsterAttack(monster);
-                            monsterIndex++;
-                            
-                            // 每个怪物攻击间隔
-                            setTimeout(nextMonsterAttack, 1000);
-                        } else {
-                            // 所有怪物攻击结束
-                            endMonsterTurn();
-                        }
-                    }
-                    
-                    nextMonsterAttack();
-                } else {
-                    endMonsterTurn();
-                }
-            }
 
             // 单个怪物攻击逻辑
             function monsterAttack(monster) {
@@ -8703,6 +9129,25 @@
                 }
                 
                 addLog(`📊 ${monster.name}获得了${effect.name}状态！`);
+            }
+            
+            // 计算基于速度的战斗顺序
+            function calculateTurnOrder() {
+                // 收集所有活着的角色和怪物
+                const aliveCharacters = playerTeam.filter(char => char.hp > 0);
+                const aliveMonsters = monsters.filter(monster => monster.hp > 0);
+                
+                // 合并所有战斗单位
+                const allCombatants = [...aliveCharacters, ...aliveMonsters];
+                
+                // 根据速度属性排序，速度高的先行动
+                allCombatants.sort((a, b) => {
+                    const speedA = a.attrs[AttrType.速度] || 0;
+                    const speedB = b.attrs[AttrType.速度] || 0;
+                    return speedB - speedA;
+                });
+                
+                return allCombatants;
             }
             
             // 更新怪物状态
@@ -8816,27 +9261,12 @@
                 // 检查怪物状态效果
                 const statusEffects = checkMonsterStatusEffects(monster);
                 
-                // 根据怪物属性、状态或类型选择不同的攻击策略
+                // 简化攻击策略：怪物只能选择攻击或技能
                 if (monster.is_boss) {
                     // BOSS使用特殊攻击策略
                     return bossAttackStrategy;
-                } else if (monster.attrs[AttrType.攻击] > monster.attrs[AttrType.防御] * 2 || statusEffects.rage) {
-                    // 高攻击怪物或愤怒状态有几率使用连击攻击
-                    return Math.random() < 0.4 ? comboAttackStrategy : aggressiveAttackStrategy;
-                } else if (monster.attrs[AttrType.防御] > monster.attrs[AttrType.攻击] * 1.5 || statusEffects.buffed) {
-                    // 高防御怪物或 buffed 状态使用防御反击
-                    return defensiveAttackStrategy;
-                } else if (monster.attrs[AttrType.暴击率] > 0.2) {
-                    // 高暴击率怪物使用控制型攻击
-                    return controlAttackStrategy;
-                } else if (monster.attrs[AttrType.吸血] > 0.1) {
-                    // 高吸血怪物使用群体攻击
-                    return areaAttackStrategy;
-                } else if (statusEffects.debuffed) {
-                    // 被 debuff 的怪物使用防御策略
-                    return defensiveAttackStrategy;
                 } else {
-                    // 平衡型怪物使用普通攻击
+                    // 普通怪物：只有普通攻击（因为普通怪物没有技能）
                     return normalAttackStrategy;
                 }
             }
@@ -8876,13 +9306,10 @@
                         }
                         break;
                     case 2:
-                        // 第二阶段：更多技能和连击
-                        if (Math.random() < 0.6) {
+                        // 第二阶段：更多技能
+                        if (Math.random() < 0.7) {
                             // 使用技能攻击
                             useBossSkill(monster, targetCharacter, aliveCharacters, finalAtk * 1.2);
-                        } else if (Math.random() < 0.5) {
-                            // 连击攻击
-                            bossComboAttack(monster, targetCharacter, finalAtk * 0.8);
                         } else {
                             // 普通攻击
                             dealMonsterDamage(monster, targetCharacter, finalAtk * 1.1);
@@ -8993,20 +9420,7 @@
                 }
             }
             
-            // BOSS连击攻击
-            function bossComboAttack(monster, targetCharacter, finalAtk) {
-                addLog(`⚔️ ${monster.name}发起连击攻击！`);
-                
-                // 连击次数（3-5次）
-                const comboCount = Math.floor(Math.random() * 3) + 3;
-                
-                for (let i = 0; i < comboCount; i++) {
-                    if (targetCharacter.hp <= 0) break;
-                    
-                    addLog(`🔄 第${i + 1}连击！`);
-                    dealMonsterDamage(monster, targetCharacter, finalAtk);
-                }
-            }
+
             
             // BOSS群体攻击
             function bossAreaAttack(monster, aliveCharacters, finalAtk) {
@@ -9071,9 +9485,9 @@
                 dealMonsterDamage(monster, targetCharacter, finalAtk);
             }
 
-            // 防御反击策略
+            // 防御姿态策略
             function defensiveAttackStrategy(monster, aliveCharacters) {
-                // 防御姿态，同时反击
+                // 防御姿态，减少伤害
                 addLog(`🛡️ ${monster.name}进入防御姿态！`);
                 const finalAtk = monster.attrs[AttrType.攻击] * 0.8; // 攻击力降低20%
                 
@@ -9081,12 +9495,9 @@
                 const targetCharacter = selectAttackTarget(monster, aliveCharacters);
                 dealMonsterDamage(monster, targetCharacter, finalAtk);
                 
-                // 防御姿态有几率反弹伤害
-                if (Math.random() < 0.2) {
-                    const reflectDamage = Math.floor(targetCharacter.attrs[AttrType.攻击] * 0.1);
-                    targetCharacter.hp = Math.max(0, targetCharacter.hp - reflectDamage);
-                    addLog(`💥 ${monster.name}的防御反击对${targetCharacter.name}造成了${reflectDamage}点伤害！`);
-                }
+                // 防御姿态：增加自身防御
+                monster.attrs[AttrType.防御] *= 1.2;
+                addLog(`🛡️ ${monster.name}的防御提升了20%！`);
             }
 
             // 普通攻击策略
@@ -9100,24 +9511,7 @@
             }
             
             // 连击攻击策略
-            function comboAttackStrategy(monster, aliveCharacters) {
-                // 连击攻击：连续攻击同一个目标多次
-                addLog(`⚔️ ${monster.name}发起连击攻击！`);
-                
-                // 选择攻击目标
-                const targetCharacter = selectAttackTarget(monster, aliveCharacters);
-                const finalAtk = monster.attrs[AttrType.攻击] * 0.7; // 每次攻击攻击力降低30%
-                
-                // 连击次数（2-3次）
-                const comboCount = Math.floor(Math.random() * 2) + 2;
-                
-                for (let i = 0; i < comboCount; i++) {
-                    if (targetCharacter.hp <= 0) break;
-                    
-                    addLog(`🔄 第${i + 1}连击！`);
-                    dealMonsterDamage(monster, targetCharacter, finalAtk);
-                }
-            }
+
             
             // 控制型攻击策略
             function controlAttackStrategy(monster, aliveCharacters) {
@@ -9242,129 +9636,63 @@
 
             // 处理怪物伤害计算
             function dealMonsterDamage(monster, targetCharacter, attackValue) {
-                // 定义伤害变量
-                let damage = undefined;
-                let reducedDamage = undefined;
+                // 使用统一战斗处理函数
+                const combatResult = handleCombat(monster, targetCharacter, false);
                 
-                // 检查闪避
-                const dodgeChance = targetCharacter.attrs[AttrType.闪避] || 0;
-                if (Math.random() < dodgeChance) {
-                    addLog(`✨ ${monster.name}发起攻击！${targetCharacter.name}成功闪避了攻击！`, "log-dodge");
-                    // 添加闪避特效
+                // 处理战斗结果
+                if (!combatResult.success) {
+                    // 闪避情况
+                    addLog(combatResult.message, "log-dodge");
                     showSkillEffect('闪避');
                     
-                    // 闪避成功后的额外效果
-                    if (targetCharacter.class === "法师") {
-                        // 法师闪避后有10%几率获得攻击提升
-                        if (Math.random() < 0.1) {
-                            const atkBonus = 0.1;
-                            targetCharacter.attrs[AttrType.攻击] *= (1 + atkBonus);
-                            addLog(`⚡ ${targetCharacter.name}的闪避激发了潜能！攻击提升10%，持续2回合！`);
-                        }
-                    }
-                } else {
-                    // 检查格挡
-                    const blockChance = targetCharacter.attrs[AttrType.格挡] || 0;
-                    let block = 0;
-                    
-                    if (Math.random() < blockChance) {
-                        // 基础格挡值 + 格挡属性加成
-                        block = Math.floor(Math.random() * 5) + Math.floor((targetCharacter.attrs[AttrType.格挡] || 0) * 10);
-                    } else {
-                        // 普通格挡（随机值）
-                        block = Math.floor(Math.random() * 3);
-                    }
-                    
-                    // 计算最终伤害
-                    damage = Math.max(1, Math.floor(attackValue - block));
-                    // 应用减伤属性
-                    reducedDamage = Math.max(1, Math.floor(damage * (1 - (targetCharacter.attrs[AttrType.减伤] || 0))));
-                    targetCharacter.hp = Math.max(0, targetCharacter.hp - reducedDamage);
-                    
-                    // 显示减伤效果
-                    if ((targetCharacter.attrs[AttrType.减伤] || 0) > 0) {
-                        const damageReduced = damage - reducedDamage;
-                        if (damageReduced > 0) {
-                            addLog(`🛡️ ${targetCharacter.name}的减伤效果减免了${damageReduced}点伤害！`);
-                        }
-                    }
-                    
-                    // 格挡等级效果
-                    if (block > 10) {
-                        // 高级格挡：反弹伤害
-                        const reflectDamage = Math.floor(reducedDamage * 0.2);
-                        monster.hp = Math.max(0, monster.hp - reflectDamage);
-                        addLog(`💥 ${targetCharacter.name}的格挡反弹了${reflectDamage}点伤害给${monster.name}！`, "log-reflect");
-                    } else if (block > 5) {
-                        // 中级格挡：获得防御增益
-                        if (targetCharacter.class === "战士") {
-                            const defBonus = 0.2;
-                            targetCharacter.attrs[AttrType.防御] *= (1 + defBonus);
-                            addLog(`🛡️ ${targetCharacter.name}的防御姿态激活！防御提升20%，持续2回合！`);
-                        }
-                    }
-
-                    // 闪避/格挡特效文字
-                    if (block > 10) {
-                        addLog(`🛡️ ${monster.name}发起攻击！${targetCharacter.name}完美格挡了攻击并反弹了伤害！只受到${reducedDamage}点伤害！`, "log-block");
-                    } else if (block > 5) {
-                        addLog(`🛡️ ${monster.name}发起攻击！${targetCharacter.name}完美格挡了攻击！只受到${reducedDamage}点伤害！`, "log-block");
-                    } else if (block > 0) {
-                        addLog(`⚔️ ${monster.name}发起攻击！${targetCharacter.name}格挡了${block}点伤害，实际受到${reducedDamage}点伤害！`, "log-block");
-                    } else {
-                        addLog(`⚠️ ${monster.name}发起攻击！对${targetCharacter.name}造成${reducedDamage}点伤害！`);
-                    }
+                    // 立即更新状态显示
+                    updateStatus();
+                    return;
                 }
                 
+                // 处理命中情况
+                const reducedDamage = combatResult.damage;
+                
+                // 显示战斗消息
+                combatResult.messages.forEach((message, index) => {
+                    if (combatResult.isCrit && index === 0) {
+                        addLog(message, "log-crit");
+                    } else if (combatResult.isBlocked && index === 0) {
+                        addLog(message, "log-block");
+                    } else {
+                        addLog(message);
+                    }
+                });
+                
+                // 应用伤害
+                targetCharacter.hp = Math.max(0, targetCharacter.hp - reducedDamage);
+                
                 // 使用实际受到的伤害显示动画
-                const damageToShow = reducedDamage || damage;
-                if (typeof damageToShow !== 'undefined') {
-                    showDamageAnimation(damageToShow, 'monster', targetCharacter);
+                showDamageAnimation(reducedDamage, 'monster', targetCharacter);
+                
+                // 立即更新状态显示，包括角色和怪物属性
+                updateStatus();
+                
+                // 检查是否所有角色都已死亡
+                const allCharactersDead = playerTeam.every(char => char.hp <= 0);
+                if (allCharactersDead) {
+                    addLog(`💀 所有队伍成员都已倒下！`, "log-lose");
+                    endBattle(false);
+                    Win = false;
+                    
+                    // 战斗结束，重新启用攻击按钮
+                    isAttackInProgress = false;
+                    if (dom.attackBtn) {
+                        dom.attackBtn.disabled = false;
+                        dom.attackBtn.style.opacity = "1";
+                    }
                 }
             }
 
 
 
             // 结束怪物回合
-            function endMonsterTurn() {
-                // 更新怪物状态
-                monsters.forEach(monster => {
-                    if (monster.hp > 0) {
-                        updateMonsterStatus(monster);
-                    }
-                });
-                
-                // 显示所有队伍成员的血量
-                playerTeam.forEach(character => {
-                    if (character.hp > 0) {
-                        addLog(`❤️ ${character.name}的剩余血量：${Math.round(character.hp)}/${Math.round(character.max_hp)}`);
-                    } else {
-                        addLog(`💀 ${character.name}已经倒下了！`);
-                    }
-                });
 
-                // 更新状态
-                updateTeamStatus();
-
-                // 检查是否所有角色都死亡
-                const allCharactersDead = playerTeam.every(char => char.hp <= 0);
-                if (allCharactersDead) {
-                    addLog(`💀 所有队伍成员都已倒下！`, "log-lose");
-                    endBattle(false);
-                    Win = false;
-                    return;
-                }
-
-                // 技能冷却
-                skills.forEach(skill => skill.cooldown());
-
-                // 应用持续效果
-                applyOngoingEffects();
-                
-                // 回合结束，进入下一回合
-                roundNum++;
-                addLog(`【第${roundNum}回合】—— 准备就绪 ——`);
-            }
 
             // 游戏初始化函数
             function initGame() {
@@ -9386,7 +9714,7 @@
                     addLog('🎉 首次登录奖励：1000金币！');
                     // 发放初始装备（强制设置为凡品稀有度）
                     const initialWeapon = new Equipment(Part.武器, 1);
-                    const initialArmor = new Equipment(Part.防具, 1);
+                    const initialArmor = new Equipment(Part.胸甲, 1);
                     // 强制设置为凡品稀有度
                     initialWeapon.rarity = '凡品';
                     initialWeapon.rarityValue = 0;
@@ -9413,14 +9741,13 @@
                     
                     // 发放初始物品
                     const initialPotion = new Item('potion', 1);
-                    const initialMana = new Item('mana', 1);
+
                     const initialScroll = new Item('scroll', 1);
                     const initialStone = new Item('stone', 1);
                     equipmentList.items.push(initialPotion);
-                    equipmentList.items.push(initialMana);
                     equipmentList.items.push(initialScroll);
                     equipmentList.items.push(initialStone);
-                    addLog('🎁 新手物品：生命药水、魔法药水、力量卷轴和强化石！');
+                    addLog('🎁 新手物品：生命药水、力量卷轴和强化石！');
                     
                     // 初始化游戏设置
                     effectsEnabled = false;
@@ -9539,7 +9866,7 @@
                             
                             // 发放初始装备
                             const initialWeapon = new Equipment(Part.武器, 1);
-                            const initialArmor = new Equipment(Part.防具, 1);
+                            const initialArmor = new Equipment(Part.胸甲, 1);
                             
                             // 将新手装备放到装备库中
                             equipmentList.weapons.push(initialWeapon);
@@ -9627,6 +9954,8 @@
 
             // 开始战斗函数
             function startBattle(level) {
+                
+
                 console.log('开始战斗函数被调用，挑战关卡：', level || currentLevel);
                 
                 try {
@@ -9638,6 +9967,7 @@
                     // 确保战斗状态为活跃
                     isBattleActive = true;
                     roundNum = 1;
+                    
                     
                     // 初始化玩家队伍
                     initPlayerTeam();
@@ -10164,54 +10494,74 @@
                 addLog("💩 战斗失败！选择下方按钮重新开始！");
                 gameStats.currentStreak = 0;
                 
-                // 创建并显示失败后的按钮
-                const mainActionContainer = document.querySelector('.main-action-container');
-                if (mainActionContainer) {
-                    // 清空容器
-                    mainActionContainer.innerHTML = '';
+                // 检查是否是探索模式
+                if (currentGameMode === 'exploration') {
+                    addLog("🏃 你勉强逃脱了战斗，返回城镇休整！");
                     
-                    // 创建从第一关开始按钮
-                    const firstLevelBtn = document.createElement('button');
-                    firstLevelBtn.className = 'game-btn firstLevel-btn';
-                    firstLevelBtn.id = 'firstLevelBtn';
-                    firstLevelBtn.textContent = '🏁 从第一关开始';
-                    firstLevelBtn.onclick = () => {
-                        startBattle(1);
-                    };
-                    
-                    // 创建重新挑战按钮
-                    const restartBtn = document.createElement('button');
-                    restartBtn.className = 'game-btn restart-btn';
-                    restartBtn.id = 'restartBtn';
-                    restartBtn.textContent = '🔄 重新挑战';
-                    restartBtn.onclick = () => {
-                        startBattle(currentLevel);
-                    };
-                    
-                    // 创建选择挑战已通过关卡按钮
-                    const selectBtn = document.createElement('button');
-                    selectBtn.className = 'game-btn select-btn';
-                    selectBtn.id = 'selectBtn';
-                    selectBtn.textContent = '📋 选择挑战已通过关卡';
-                    selectBtn.onclick = () => {
-                        generateLevelList();
-                        dom.levelSelectModal.style.display = "block";
-                    };
-                    
-                    // 添加按钮到容器
-                    mainActionContainer.appendChild(firstLevelBtn);
-                    mainActionContainer.appendChild(restartBtn);
-                    mainActionContainer.appendChild(selectBtn);
-                    
-                    // 更新dom对象引用
-                    dom.firstLevelBtn = firstLevelBtn;
-                    dom.restartBtn = restartBtn;
-                    dom.selectBtn = selectBtn;
-                    
-                    // 确保按钮可见
-                    firstLevelBtn.style.display = "inline-block";
-                    restartBtn.style.display = "inline-block";
-                    selectBtn.style.display = "inline-block";
+                    // 等待一段时间后显示探索结果页面
+                    setTimeout(() => {
+                        // 创建探索失败结果
+                        const result = {
+                            type: 'nothing',
+                            message: '战斗失败！你勉强逃脱了！',
+                            rewards: [],
+                            success: false
+                        };
+                        
+                        // 显示探索结果
+                        showExplorationResult(result);
+                    }, 1000);
+                } else {
+                    // 其他模式的失败处理
+                    // 创建并显示失败后的按钮
+                    const mainActionContainer = document.querySelector('.main-action-container');
+                    if (mainActionContainer) {
+                        // 清空容器
+                        mainActionContainer.innerHTML = '';
+                        
+                        // 创建从第一关开始按钮
+                        const firstLevelBtn = document.createElement('button');
+                        firstLevelBtn.className = 'game-btn firstLevel-btn';
+                        firstLevelBtn.id = 'firstLevelBtn';
+                        firstLevelBtn.textContent = '🏁 从第一关开始';
+                        firstLevelBtn.onclick = () => {
+                            startBattle(1);
+                        };
+                        
+                        // 创建重新挑战按钮
+                        const restartBtn = document.createElement('button');
+                        restartBtn.className = 'game-btn restart-btn';
+                        restartBtn.id = 'restartBtn';
+                        restartBtn.textContent = '🔄 重新挑战';
+                        restartBtn.onclick = () => {
+                            startBattle(currentLevel);
+                        };
+                        
+                        // 创建选择挑战已通过关卡按钮
+                        const selectBtn = document.createElement('button');
+                        selectBtn.className = 'game-btn select-btn';
+                        selectBtn.id = 'selectBtn';
+                        selectBtn.textContent = '📋 选择挑战已通过关卡';
+                        selectBtn.onclick = () => {
+                            generateLevelList();
+                            dom.levelSelectModal.style.display = "block";
+                        };
+                        
+                        // 添加按钮到容器
+                        mainActionContainer.appendChild(firstLevelBtn);
+                        mainActionContainer.appendChild(restartBtn);
+                        mainActionContainer.appendChild(selectBtn);
+                        
+                        // 更新dom对象引用
+                        dom.firstLevelBtn = firstLevelBtn;
+                        dom.restartBtn = restartBtn;
+                        dom.selectBtn = selectBtn;
+                        
+                        // 确保按钮可见
+                        firstLevelBtn.style.display = "inline-block";
+                        restartBtn.style.display = "inline-block";
+                        selectBtn.style.display = "inline-block";
+                    }
                 }
             }
 
@@ -10242,6 +10592,9 @@
                             break;
                         case 'dungeon':
                             handleDungeonModeWin();
+                            break;
+                        case 'exploration':
+                            handleExplorationModeWin();
                             break;
                         default:
                             handleStoryModeWin();
@@ -10355,6 +10708,48 @@
                             addLog(`🔥 ${targetMonster.name}受到持续伤害效果，每回合将受到${dotDamage}点伤害，持续3回合！`);
                         }
                         
+                        // 立即更新状态显示，包括角色和怪物属性
+                        updateStatus();
+                        
+                        // 检查是否所有怪物都已死亡
+                        const allMonstersDead = monsters.every(m => m.hp <= 0);
+                        if (allMonstersDead) {
+                            const deadMonstersNames = monsters.map(m => m.name).join('、');
+                            addLog(`🎉 恭喜！你的队伍击败了${deadMonstersNames}！本局仅用${roundNum}回合，太帅了！`, "log-win");
+                            endBattle(true);
+                            Win = true;
+                            
+                            // 战斗结束，重新启用攻击按钮
+                            isAttackInProgress = false;
+                            if (dom.attackBtn) {
+                                dom.attackBtn.disabled = false;
+                                dom.attackBtn.style.opacity = "1";
+                            }
+                            
+                            // 关闭技能模态框
+                            dom.skillModal.style.display = "none";
+                            return;
+                        }
+                        
+                        // 检查是否所有角色都已死亡
+                        const allCharactersDead = playerTeam.every(char => char.hp <= 0);
+                        if (allCharactersDead) {
+                            addLog(`💀 所有队伍成员都已倒下！`, "log-lose");
+                            endBattle(false);
+                            Win = false;
+                            
+                            // 战斗结束，重新启用攻击按钮
+                            isAttackInProgress = false;
+                            if (dom.attackBtn) {
+                                dom.attackBtn.disabled = false;
+                                dom.attackBtn.style.opacity = "1";
+                            }
+                            
+                            // 关闭技能模态框
+                            dom.skillModal.style.display = "none";
+                            return;
+                        }
+                        
                         // 关闭技能模态框
                         dom.skillModal.style.display = "none";
                         
@@ -10426,6 +10821,9 @@
                             break;
                         case 'dungeon':
                             enterDungeonMode();
+                            break;
+                        case 'exploration':
+                            enterExplorationMode();
                             break;
                     }
                 }
@@ -10505,6 +10903,331 @@
                 // 显示副本选择模态框
                 document.getElementById('dungeonSelectModal').style.display = 'block';
                 generateDungeonOptions();
+            }
+            
+            // 进入探索模式
+            window.enterExplorationMode = function() {
+                // 显示探索区域选择模态框
+                document.getElementById('explorationModal').style.display = 'block';
+            }
+            
+            // 处理探索模式胜利
+            window.handleExplorationModeWin = function() {
+                addLog(`🎉 战斗胜利！继续你的探索之旅！`);
+                
+                // 计算战斗奖励
+                const goldReward = Math.floor(Math.random() * 50) + 20;
+                const expReward = Math.floor(Math.random() * 30) + 10;
+                
+                // 发放奖励
+                playerGold += goldReward;
+                experience += expReward;
+                
+                addLog(`💰 获得 ${goldReward} 金币！`);
+                addLog(`📈 获得 ${expReward} 经验值！`);
+                
+                // 检查是否升级
+                checkLevelUp();
+                
+                // 保存游戏状态
+                saveGameState();
+                
+                // 等待一段时间后显示探索结果页面
+                setTimeout(() => {
+                    // 创建探索结果
+                    const result = {
+                        type: 'treasure',
+                        message: '战斗胜利！获得了战利品！',
+                        rewards: [
+                            { type: 'gold', amount: goldReward }
+                        ],
+                        success: true
+                    };
+                    
+                    // 显示探索结果
+                    showExplorationResult(result);
+                }, 2000);
+            }
+            
+            // 选择探索区域
+            window.selectExplorationArea = function(area) {
+                // 关闭探索区域选择模态框
+                document.getElementById('explorationModal').style.display = 'none';
+                
+                // 初始化探索模式，传入选择的区域
+                initExplorationMode(area);
+                
+                // 显示战斗状态
+                updateStatus();
+                
+                // 重置战斗日志
+                dom.battleLog.innerHTML = `<div class="log-item">探索模式开始！在${getAreaName(area)}中寻找宝藏和资源！</div>`;
+                
+                // 开始探索
+                startExploration();
+            }
+            
+            // 初始化探索模式
+            window.initExplorationMode = function(area) {
+                // 保存当前探索区域
+                currentExplorationArea = area;
+                
+                // 根据区域设置探索参数
+                explorationParams = getAreaParams(area);
+                
+                // 重置探索状态
+                explorationStats = {
+                    encounters: 0,
+                    treasuresFound: 0,
+                    resourcesGathered: 0,
+                    totalSteps: 0
+                };
+            }
+            
+            // 开始探索
+            window.startExploration = function() {
+                // 生成探索结果
+                const result = generateExplorationResult();
+                
+                // 显示探索结果
+                showExplorationResult(result);
+            }
+            
+            // 生成探索结果
+            window.generateExplorationResult = function() {
+                const result = {
+                    type: '',
+                    message: '',
+                    rewards: [],
+                    enemies: [],
+                    success: true
+                };
+                
+                // 根据概率决定探索结果类型
+                const roll = Math.random();
+                
+                if (roll < 0.4) {
+                    // 遭遇怪物
+                    result.type = 'combat';
+                    result.message = '遭遇了怪物！';
+                    result.enemies = generateExplorationEnemies();
+                } else if (roll < 0.7) {
+                    // 发现宝藏
+                    result.type = 'treasure';
+                    result.message = '发现了宝藏！';
+                    result.rewards = generateExplorationRewards();
+                    explorationStats.treasuresFound++;
+                } else if (roll < 0.9) {
+                    // 采集资源
+                    result.type = 'resource';
+                    result.message = '发现了资源点！';
+                    result.rewards = generateExplorationResources();
+                    explorationStats.resourcesGathered++;
+                } else {
+                    // 一无所获
+                    result.type = 'nothing';
+                    result.message = '探索了一段时间，但什么也没发现...';
+                }
+                
+                // 更新探索统计
+                explorationStats.totalSteps++;
+                if (result.type === 'combat') {
+                    explorationStats.encounters++;
+                }
+                
+                return result;
+            }
+            
+            // 生成探索敌人
+            window.generateExplorationEnemies = function() {
+                const enemies = [];
+                const enemyCount = Math.floor(Math.random() * 3) + 1; // 1-3个敌人
+                
+                for (let i = 0; i < enemyCount; i++) {
+                    const enemyLevel = getAreaEnemyLevel();
+                    const enemy = generateMonster(enemyLevel);
+                    enemies.push(enemy);
+                }
+                
+                return enemies;
+            }
+            
+            // 生成探索奖励
+            window.generateExplorationRewards = function() {
+                const rewards = [];
+                const rewardCount = Math.floor(Math.random() * 2) + 1; // 1-2个奖励
+                
+                for (let i = 0; i < rewardCount; i++) {
+                    if (Math.random() < 0.7) {
+                        // 生成装备
+                        const equipment = new Equipment(getRandomEquipmentType(), getAreaEnemyLevel());
+                        rewards.push({ type: 'equipment', item: equipment });
+                    } else {
+                        // 生成金币
+                        const gold = Math.floor(Math.random() * 100) + 50;
+                        rewards.push({ type: 'gold', amount: gold });
+                    }
+                }
+                
+                return rewards;
+            }
+            
+            // 生成探索资源
+            window.generateExplorationResources = function() {
+                const resources = [];
+                const resourceCount = Math.floor(Math.random() * 3) + 2; // 2-4个资源
+                
+                for (let i = 0; i < resourceCount; i++) {
+                    const resourceTypes = ['草药', '矿石', '木材', '水晶'];
+                    const resourceType = resourceTypes[Math.floor(Math.random() * resourceTypes.length)];
+                    const amount = Math.floor(Math.random() * 5) + 1;
+                    resources.push({ type: 'resource', name: resourceType, amount: amount });
+                }
+                
+                return resources;
+            }
+            
+            // 显示探索结果
+            window.showExplorationResult = function(result) {
+                const resultBody = document.getElementById('explorationResultModalBody');
+                let html = '';
+                
+                html += `<div style="margin-bottom: 20px; padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: var(--border-radius-md);">`;
+                html += `<h4 style="color: var(--accent-color); margin-bottom: 10px;">${result.message}</h4>`;
+                
+                if (result.type === 'combat') {
+                    html += `<p style="margin-bottom: 10px;">你遭遇了以下怪物：</p>`;
+                    html += `<ul style="list-style: none; padding: 0;">`;
+                    result.enemies.forEach(enemy => {
+                        html += `<li style="margin-bottom: 5px;">${enemy.name} (Lv.${enemy.level})</li>`;
+                    });
+                    html += `</ul>`;
+                    html += `<p style="margin-top: 10px; font-size: 14px; opacity: 0.8;">准备战斗！</p>`;
+                } else if (result.type === 'treasure' || result.type === 'resource') {
+                    html += `<p style="margin-bottom: 10px;">你获得了以下物品：</p>`;
+                    html += `<ul style="list-style: none; padding: 0;">`;
+                    result.rewards.forEach(reward => {
+                        if (reward.type === 'equipment') {
+                            html += `<li style="margin-bottom: 5px;">${reward.item.name} (${reward.item.rarityName})</li>`;
+                        } else if (reward.type === 'gold') {
+                            html += `<li style="margin-bottom: 5px;">💰 ${reward.amount} 金币</li>`;
+                        } else if (reward.type === 'resource') {
+                            html += `<li style="margin-bottom: 5px;">${reward.name} × ${reward.amount}</li>`;
+                        }
+                    });
+                    html += `</ul>`;
+                }
+                
+                html += `</div>`;
+                
+                // 显示探索统计
+                html += `<div style="padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: var(--border-radius-md);">`;
+                html += `<h4 style="color: var(--primary-color); margin-bottom: 10px;">探索统计</h4>`;
+                html += `<p>总步数: ${explorationStats.totalSteps}</p>`;
+                html += `<p>遭遇怪物: ${explorationStats.encounters}</p>`;
+                html += `<p>发现宝藏: ${explorationStats.treasuresFound}</p>`;
+                html += `<p>采集资源: ${explorationStats.resourcesGathered}</p>`;
+                html += `</div>`;
+                
+                resultBody.innerHTML = html;
+                document.getElementById('explorationResultModal').style.display = 'block';
+                
+                // 如果是遭遇怪物，自动进入战斗
+                if (result.type === 'combat') {
+                    setTimeout(() => {
+                        document.getElementById('explorationResultModal').style.display = 'none';
+                        startExplorationCombat(result.enemies);
+                    }, 1000);
+                }
+            }
+            
+            // 开始探索战斗
+            window.startExplorationCombat = function(enemies) {
+                // 设置游戏模式为探索模式
+                currentGameMode = 'exploration';
+                
+                // 设置战斗状态
+                isBattleActive = true;
+                roundNum = 1;
+                
+                // 更新怪物列表
+                monsters = enemies;
+                
+                // 显示战斗状态
+                updateStatus();
+                
+                // 重置战斗日志
+                dom.battleLog.innerHTML = `<div class="log-item">探索中遭遇怪物！战斗开始！</div>`;
+                
+                // 开始战斗
+                startBattle();
+            }
+            
+            // 继续探索
+            window.continueExploration = function() {
+                document.getElementById('explorationResultModal').style.display = 'none';
+                startExploration();
+            }
+            
+            // 关闭探索模态框
+            window.closeExplorationModal = function() {
+                document.getElementById('explorationModal').style.display = 'none';
+            }
+            
+            // 关闭探索结果模态框
+            window.closeExplorationResultModal = function() {
+                document.getElementById('explorationResultModal').style.display = 'none';
+                showModeSelectModal();
+            }
+            
+            // 获取区域名称
+            window.getAreaName = function(area) {
+                const areaNames = {
+                    'forest': '神秘森林',
+                    'mountain': '险峻山脉',
+                    'desert': '灼热沙漠',
+                    'dungeon': '古老地牢'
+                };
+                return areaNames[area] || area;
+            }
+            
+            // 获取区域参数
+            window.getAreaParams = function(area) {
+                const params = {
+                    'forest': {
+                        enemyLevel: 1,
+                        treasureRate: 0.3,
+                        resourceRate: 0.4
+                    },
+                    'mountain': {
+                        enemyLevel: 3,
+                        treasureRate: 0.4,
+                        resourceRate: 0.5
+                    },
+                    'desert': {
+                        enemyLevel: 5,
+                        treasureRate: 0.5,
+                        resourceRate: 0.4
+                    },
+                    'dungeon': {
+                        enemyLevel: 7,
+                        treasureRate: 0.6,
+                        resourceRate: 0.3
+                    }
+                };
+                return params[area] || params['forest'];
+            }
+            
+            // 获取区域敌人等级
+            window.getAreaEnemyLevel = function() {
+                const baseLevel = explorationParams.enemyLevel;
+                return baseLevel + Math.floor(Math.random() * 3); // 基础等级 ± 2
+            }
+            
+            // 获取随机装备类型
+            window.getRandomEquipmentType = function() {
+                const types = ['weapon', 'armor', 'accessory', 'talisman'];
+                return types[Math.floor(Math.random() * types.length)];
             }
             
             // 生成副本选择选项
